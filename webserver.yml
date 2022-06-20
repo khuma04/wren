@@ -1,0 +1,92 @@
+---
+- name: installing and configuring firewalld for all servers
+  hosts: all
+  tasks:
+  - name: install firewalld
+    yum:
+      name: firewalld
+      state: latest
+
+  - name: starting firewalld and enabling
+    service:
+      name: firewalld
+      state: started
+      enabled: yes
+
+  - name: open firewall for httpd
+    firewalld:
+      service: "{{ item }}"
+      state: enabled
+      permanent: yes
+      immediate: yes
+    loop:
+      - http
+      - https
+
+##### start of second play to configure webservers with apache ####
+
+- name: install apache and apply web content template
+  hosts: webservers
+  tasks:
+  - name: install apache
+    yum:
+      name: httpd
+      state: latest
+
+
+  - name: start httpd and enable
+    service:
+      name: httpd
+      state: started
+      enabled: yes
+
+  - name: open firewall for httpd
+    firewalld:
+      service: "{{ item }}"
+      state: enabled
+      permanent: yes
+      immediate: yes
+    loop:
+      - http
+      - https
+
+  - name: apply template to index.html
+    template:
+      src: templates/index.j2
+      dest: /var/www/html/index.html
+    notify: content_change
+
+  handlers:
+  - name: content_change
+    service:
+      name: httpd
+      state: restarted
+
+### start of final play to install and configure haproxy load balancer ###
+
+- name: install and configure haproxy on balancer server
+  hosts: lb
+  tasks:
+  - name: install haproxy
+    yum:
+      name: haproxy
+      state: latest
+
+  - name: start haproxy
+    service:
+      name: haproxy
+      state: started
+      enabled: yes
+
+  - name: apply haproxy config
+    template:
+      src: templates/haproxy.j2
+      dest: /etc/haproxy/haproxy.cfg
+    notify: restart_haproxy
+
+  handlers:
+  - name: restart_haproxy
+    service:
+      name: haproxy
+      state: restarted
+

@@ -1,0 +1,10 @@
+# The IP/fqdn of these servers should be added to  /etc/hosts
+
+[balancer]
+lb
+
+
+[webservers]
+
+app-01
+app-02
